@@ -1,0 +1,53 @@
+# .NET Framework Inventory - Console Output 
+Write-Output "==== .NET Framework Inventory ===="
+# Check .NET 4.x release version
+function Get-Net45PlusRelease {
+    $path = "HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full"
+    try {
+        $release = Get-ItemProperty -Path $path -Name Release -ErrorAction Stop | Select-Object -ExpandProperty Release
+        return $release
+    } catch {
+        return $null
+    }
+}
+$release = Get-Net45PlusRelease
+if ($release) {
+    Write-Output "Detected .NET 4.x Release key: $release"
+} else {
+    Write-Output "No .NET 4.x Release key found"
+}
+# Check if .NET 3.5 is installed
+try {
+    $net35 = Get-WindowsOptionalFeature -Online -FeatureName NetFx3 -ErrorAction Stop
+    Write-Output ".NET 3.5 (NetFx3) state: $($net35.State)"
+} catch {
+    Write-Output "Could not determine .NET 3.5 status: $($_.Exception.Message)"
+}
+# Search for .exe + .config pairs that define supported runtime
+Write-Output "`nScanning for executables with .NET runtime config..."
+$paths = @("${env:ProgramFiles}", "${env:ProgramFiles(x86)}") | Where-Object { Test-Path $_ }
+foreach ($p in $paths) {
+    Get-ChildItem -Path $p -Recurse -Filter *.exe -ErrorAction SilentlyContinue | ForEach-Object {
+        $exe = $_.FullName
+        $cfg = "$exe.config"
+        if (Test-Path $cfg) {
+            try {
+                $cfgXml = [xml](Get-Content $cfg -ErrorAction Stop)
+                $runtime = $null
+                if ($cfgXml.configuration.startup.supportedRuntime) {
+                    $runtime = $cfgXml.configuration.startup.supportedRuntime | ForEach-Object { $_.version } -join ","
+                } elseif ($cfgXml.configuration.runtime) {
+                    $runtime = $cfgXml.configuration.runtime.InnerXml
+                }
+                if ($runtime) {
+                    Write-Output "`nExecutable: $exe"
+                    Write-Output "Config:     $cfg"
+                    Write-Output "Runtime:    $runtime"
+                }
+            } catch {
+                # Ignore malformed config files
+            }
+        }
+    }
+}
+Write-Output "`n==== Inventory Complete ===="
