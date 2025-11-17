@@ -1,35 +1,17 @@
 Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
-
 # Set registry path and value names
-
 $regPath64 = "HKLM:\Software\Microsoft\Cryptography\Wintrust\Config"
-
 $regPath32 = "HKLM:\Software\Wow6432Node\Microsoft\Cryptography\Wintrust\Config"
-
 $valueName = "EnableCertPaddingCheck"
-
 $valueData = 1
- 
 # Create or set the DWORD value under the 64-bit registry path
-
 If (-Not (Test-Path $regPath64)) {
-
     New-Item -Path $regPath64 -Force | Out-Null
-
 }
-
 Set-ItemProperty -Path $regPath64 -Name $valueName -Value $valueData -Type DWord
- 
 # Create or set the DWORD value under the 32-bit registry path
-
 If (-Not (Test-Path $regPath32)) {
-
     New-Item -Path $regPath32 -Force | Out-Null
-
 }
-
 Set-ItemProperty -Path $regPath32 -Name $valueName -Value $valueData -Type DWord
- 
 Write-Output "Registry values for EnableCertPaddingCheck set to 1 under both registry paths."
-
- 
